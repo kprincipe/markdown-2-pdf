@@ -42,7 +42,6 @@ int find_files(char *path, Files *files) {
     return 0;
 }
 
-
 // TODO: some kind of preprocessor possibly
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -51,34 +50,34 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *path = argv[1];
+    char *source = argv[1];
+
+    char input_path[255];
+    char output_name[255];
 
     Files files = {0};
-    find_files(path, &files);
+    find_files(source, &files);
 
     for (int i = 0; i < files.count; ++i) {
-        assert(sizeof(path) + sizeof(files.file[i].name) >= 255);
+        assert(strlen(source) + strlen(files.file[i].name) <= 255);
 
-        char full_path[255];
-        char name_pdf_ext[255];
+        strcpy(input_path, source);
+        if (source[strlen(source) - 1] != '/') strcat(input_path, "/");
+        strcat(input_path, files.file[i].name);
 
-        strcat(full_path, path);
-        if (path[strlen(path)] != '/') strcat(full_path, "/");
-        strcat(full_path, files.file[i].name);
-
-        strncpy(name_pdf_ext, files.file[i].name, strlen(files.file[i].name) - 3);
-        strcat(name_pdf_ext, ".pdf");
+        strcpy(output_name, files.file[i].name);
+        strcat(output_name, ".pdf");
 
         // pandoc -o $input_name.pdf --from markdown --to pdf $input_name.md --toc
         char *pandoc_args[] = {
             "",
             "-o",
-            name_pdf_ext,
+            output_name,
             "--from",
             "markdown",
             "--to",
             "pdf",
-            full_path,
+            input_path,
             "--toc",
             NULL,
         };
@@ -90,7 +89,7 @@ int main(int argc, char *argv[]) {
             else printf(", ");
         }
         
-        printf("log: processing %s to %s\n", full_path, name_pdf_ext);
+        printf("log: processing %s to %s\n", input_path, output_name);
         
         pid_t pid;
         pid = fork(); // begin child process
@@ -98,6 +97,7 @@ int main(int argc, char *argv[]) {
         int stats;
 
         if (pid == 0) {
+            // TODO: unhardcode pandoc path
             if (execvp("/usr/bin/pandoc", pandoc_args) == -1) {
                 fprintf(stderr, "error: could not execute pandoc\n");
                 return 1;
@@ -111,10 +111,6 @@ int main(int argc, char *argv[]) {
             else if (stats == 1)
                 printf("debug: child process ended with error: pid %d\n", stats);
         }
-        
-        // reset strings
-        *full_path = '\0';
-        *name_pdf_ext = '\0';
     }
     return 0;
 }
