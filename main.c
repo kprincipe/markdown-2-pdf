@@ -42,6 +42,16 @@ int find_files(char *path, Files *files) {
     return 0;
 }
 
+void strip_ext(char *s) {
+    int i = 0;
+    while (s[i++] != '\0') {
+        if (s[i] == '.') {
+            s[i] = '\0';
+            break;
+        }
+    }
+}
+
 // TODO: some kind of preprocessor possibly
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -66,6 +76,7 @@ int main(int argc, char *argv[]) {
         strcat(input_path, files.file[i].name);
 
         strcpy(output_name, files.file[i].name);
+        strip_ext(output_name);
         strcat(output_name, ".pdf");
 
         // pandoc -o $input_name.pdf --from markdown --to pdf $input_name.md --toc
