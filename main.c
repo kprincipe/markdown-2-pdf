@@ -56,34 +56,44 @@ void strip_ext(char *s) {
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "error: not enough arguments\n");
-        fprintf(stderr, "usage: %s <directory>\n", argv[0]);
+        fprintf(stderr, "usage: %s <input-directory> <output-directory>\n", argv[0]);
         return 1;
     }
 
     char *source = argv[1];
+    char *output = argv[2];
 
     char input_path[255];
+    char output_path[255];
     char output_name[255];
 
     Files files = {0};
     find_files(source, &files);
 
+    // TODO: find a way to abstract input_path, output_path and output_name string manipulation
     for (int i = 0; i < files.count; ++i) {
         assert(strlen(source) + strlen(files.file[i].name) <= 255);
 
+        // input path
         strcpy(input_path, source);
         if (source[strlen(source) - 1] != '/') strcat(input_path, "/");
         strcat(input_path, files.file[i].name);
 
+        // output path
+        if (argc >= 3) {
+            strcpy(output_path, output);
+            if (output[strlen(output) - 1] != '/') strcat(output_path, "/");
+        }
         strcpy(output_name, files.file[i].name);
         strip_ext(output_name);
         strcat(output_name, ".pdf");
+        strcat(output_path, output_name);
 
         // pandoc -o $input_name.pdf --from markdown --to pdf $input_name.md --toc
         char *pandoc_args[] = {
             "",
             "-o",
-            output_name,
+            output_path,
             "--from",
             "markdown",
             "--to",
@@ -100,7 +110,7 @@ int main(int argc, char *argv[]) {
             else printf(", ");
         }
         
-        printf("log: processing %s to %s\n", input_path, output_name);
+        printf("log: processing %s to %s\n", input_path, output_path);
         
         pid_t pid;
         pid = fork(); // begin child process
@@ -117,10 +127,12 @@ int main(int argc, char *argv[]) {
         } else {
             waitpid(pid, &stats, 0);
 
-            if (stats == 0)
+            if (stats == 0) {
                 printf("debug: child process ended nicely: pid %d\n", stats);
-            else if (stats == 1)
+                strcpy(output_path, "");
+            } else if (stats == 1) {
                 printf("debug: child process ended with error: pid %d\n", stats);
+            }
         }
     }
     return 0;
